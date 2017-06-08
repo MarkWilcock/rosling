@@ -1,0 +1,130 @@
+---
+title: "Load Gapminder Data Into Power BI"
+author: "Mark Wilcock"
+date: "7 June 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Gapminder Data
+
+Do some set up.
+
+```{r warning = FALSE, message = FALSE}
+main_folder <- "C:/Users/markw/Zomalex Ltd/OneDrive - Zomalex Ltd/Demos/Rosling/"
+data_folder <-  paste0(main_folder, "Data/")
+gdp_raw_path  <-  paste0(data_folder, "indicator gapminder gdp_per_capita_ppp.xlsx")
+pop_raw_path  <-  paste0(data_folder, "indicator gapminder population.xlsx")
+life_raw_path  <-  paste0(data_folder, "indicator life_expectancy_at_birth.xlsx")
+
+setwd(main_folder)
+
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+```
+
+Load the raw data from a separate Excel file provided by Gapminder.
+
+```{r}
+gdp_raw <- read_excel(gdp_raw_path, sheet = "Data")
+pop_raw <- read_excel(pop_raw_path, sheet = "Data")
+life_raw <- read_excel(life_raw_path, sheet = "Data")
+
+pop_raw
+```
+
+```{r}
+gdp <- 
+  gdp_raw %>%  
+  rename(Country = `GDP per capita`) %>% 
+  gather(key = Year, value = Income, -Country) %>% 
+  filter(!is.na(Income)) %>% 
+  mutate(Year = as.integer(Year))
+
+pop <- 
+  pop_raw %>%  
+  rename(Country = `Total population`) %>% 
+  gather(key = Year, value = Population, -Country) %>% 
+  filter(!is.na(Population)) %>% 
+  mutate(Year = as.integer(Year))
+
+life <- 
+  life_raw %>%  
+  rename(Country = `Life expectancy with projections. Yellow is IHME`) %>% 
+  gather(key = Year, value = LifeExpectancy, -Country) %>% 
+  filter(!is.na(LifeExpectancy)) %>% 
+  mutate(Year = as.integer(Year))
+
+pop
+```
+
+Create a list of all the countries in all three datasets.
+The motion scatter plot needs a row for every country / year once records begin for that country.
+
+```{r}
+
+# the dummy variable is used to get the effect of doing a cross join (since no cross_join verb in dplyr)
+country <- 
+  bind_rows(
+    select(gdp, Country),
+    select(pop, Country),
+    select(life, Country)
+  ) %>% 
+  unique() %>% 
+  mutate(dummy = 1)
+
+year <- data_frame(Year = 1800:2015, dummy = 1) 
+
+country_year_x <- 
+  inner_join(country, year, by = "dummy") %>% 
+  select(-dummy)
+
+country_year_x
+```
+
+The population data has gaps in the years (intially only has data tow for each decades 1800, 1810,...).  Pivoted so that it can be filled down to remove gaps then unpivot to original shape
+
+
+```{r}
+pop_full <-
+  country_year_x %>% 
+  left_join(pop, by = c("Country", "Year")) %>% 
+  spread(key = Country, value = Population) %>% 
+  fill(-Year)  %>% 
+  gather(key = Country, value = Population, -Year)
+
+# ditto for life and gdp datasets
+gdp_full <-
+  country_year_x %>% 
+  left_join(gdp, by = c("Country", "Year")) %>% 
+  spread(key = Country, value = Income) %>% 
+  fill(-Year)  %>% 
+  gather(key = Country, value = Income, -Year)
+
+life_full <-
+  country_year_x %>% 
+  left_join(life, by = c("Country", "Year")) %>% 
+  spread(key = Country, value = LifeExpectancy) %>% 
+  fill(-Year)  %>% 
+  gather(key = Country, value = LifeExpectancy, -Year)
+
+pop_full
+```
+
+Finally, create the final dataset by merging the "full" versions of the income, population and life expectancy datasets.
+
+```{r}
+result <- 
+  pop_full %>% 
+  inner_join(life_full, by = c("Year", "Country")) %>% 
+  inner_join(gdp_full, by = c("Year", "Country"))
+
+result
+
+```
+
