@@ -10,14 +10,12 @@ The visual is simple to implement using the standard scatter chart visual.  Howe
 
 The magic here is in the data preparation in the Query Editor.  It loads the separate income, lifespan, and population datasets then applies a series of transformations (pivot, fill down, unpivot, merge,...) to each dataset to clean the data ready for the visual.
 
-## demo notes
+## Demo notes
 
 - explain the chart, and optimistic message
-- show the chart variations ot focus on a particular country / period
+- show the chart variations to focus on a particular country / period
 - show the Query Editor and the Query Dependencies
-- 
-## to do
-Write an R implementation of the  data preparation steps so that we can compare R with M.
+
 
 
 
