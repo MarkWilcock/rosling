@@ -22,9 +22,7 @@ life_raw_path  <-  paste0(data_folder, "indicator life_expectancy_at_birth.xlsx"
 
 setwd(main_folder)
 
-library(tidyr)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(readxl)
 ```
 
